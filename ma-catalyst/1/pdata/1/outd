@@ -1,0 +1,16 @@
+##TITLE= Parameter file, TOPSPIN		Version 3.2
+##JCAMPDX= 5.0
+##DATATYPE= Parameter Values
+##NPOINTS= 1	$$ modification sequence number
+##ORIGIN= Bruker BioSpin GmbH
+##OWNER= hmehr
+$$ 2015-03-03 15:14:43.014 -0800  hmehr@CZC4310HRS
+$$ /home/hmehr/nmrdata/ma-catalyst/1/pdata/1/outd
+$$ process /opt/topspin3.2/prog/mod/edparproc
+##$CURPLOT= <HP3015>
+##$CURPRIN= <$HP3015>
+##$DFORMAT= <normdp>
+##$LAYOUT= <+/1D_H.xwp>
+##$LFORMAT= <normlp>
+##$PFORMAT= <normpl>
+##END=

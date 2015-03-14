@@ -1,0 +1,18 @@
+##TITLE= Audit trail, TOPSPIN		Version 3.2
+##JCAMPDX= 5.01
+##ORIGIN= Bruker BioSpin GmbH
+##OWNER= hmehr
+$$ /home/hmehr/nmrdata/ma-catalyst/1/audita.txt
+##AUDIT TRAIL=  $$ (NUMBER, WHEN, WHO, WHERE, PROCESS, VERSION, WHAT)
+(   1,<2015-03-03 15:20:10.256 -0800>,<hmehr>,<CZC4310HRS>,<go>,<TOPSPIN 3.2>,
+      <created by zg
+	started at 2015-03-03 15:19:29.781 -0800,
+	POWCHK enabled, PULCHK disabled,
+       configuration hash MD5:
+       B2 5C E4 EC 82 C6 4F 76 1A FC 3F 12 FF 5C 33 4B
+       data hash MD5: 16K
+       96 98 4C F9 32 F5 B9 1D BA 36 CC 2F D6 71 FF 49>)
+##END=
+
+$$ hash MD5
+$$ 7A C9 1E 81 5A 88 47 93 6A B3 F3 4D A7 C6 32 E0
