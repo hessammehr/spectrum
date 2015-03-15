@@ -3,7 +3,9 @@ package nmr
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path"
 	"regexp"
@@ -23,6 +25,7 @@ func ReadBruker(expPath string) (*Expt, error) {
 	}
 	name := path.Base(path.Dir(expPath))
 
+	// acqu parsing
 	acquVars := parseAcqu(path.Join(expPath, "acqu"))
 	ns, _ := strconv.Atoi(acquVars["NS"])
 	td, _ := strconv.Atoi(acquVars["TD"])
@@ -30,9 +33,14 @@ func ReadBruker(expPath string) (*Expt, error) {
 	sfo1, _ := strconv.ParseFloat(acquVars["SFO1"], 64)
 	o1, _ := strconv.ParseFloat(acquVars["O1"], 64)
 
+	fid, err := readFID(path.Join(expPath, "fid"), td)
+	if err != nil {
+		log.Panic(err)
+	}
+	ft := FFT(IntToComplex(fid))
 	return &Expt{Name: name, Number: number,
 		NS: ns, SW: sw,
-		O1P: o1 / sfo1, TD: td}, nil
+		O1P: o1 / sfo1, TD: td, FID: fid, FT: ft}, nil
 }
 
 func parseAcqu(acquPath string) map[string]string {
@@ -60,11 +68,12 @@ func readFID(name string, td int) ([]int32, error) {
 	}
 
 	stat, _ := os.Stat(name)
-	fileSize := int(stat.Size())
-	if td != 0 && fileSize != td {
-		return nil, errors.New("Given td and fid file size disagree")
+	filePoints := int(stat.Size()) / 4
+	if td != 0 && filePoints != td {
+		return nil, errors.New(
+			fmt.Sprintf("Given td (%v) and fid file size (%v) disagree", td, filePoints))
 	}
-	td = fileSize
+	td = filePoints
 
 	fid := make([]int32, td)
 	if binary.Read(fidFile, binary.LittleEndian, fid) != nil {

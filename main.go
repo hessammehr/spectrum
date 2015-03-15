@@ -5,31 +5,56 @@ import (
 	"image"
 	"math/rand"
 
-	_ "code.google.com/p/draw2d/draw2d"
+	"code.google.com/p/plotinum/plot"
+	"code.google.com/p/plotinum/plotter"
+	"code.google.com/p/plotinum/vg/vgimg"
 	"github.com/andlabs/ui"
 	"github.com/hessammehr/spectrum/nmr"
 )
 
 type float float64
 
-type spectrum struct {
-	Data   nmr.NMR
-	hzoom  [2]float
-	vzoom  [2]float
-	status ui.Label
+type app struct {
+	expt *nmr.Expt
+
+	hzoom [2]float
+	vzoom [2]float
+
+	w ui.Window
+	a ui.Area
+	s ui.Label
 }
 
-var w ui.Window
-var s spectrum
+var a app
 
-func (s *spectrum) Paint(rect image.Rectangle) *image.RGBA {
+func (a *app) Paint(rect image.Rectangle) *image.RGBA {
 	//f, _ := os.Open("a.png")
 	//rgba, _, _ := image.Decode(f)
-	s.status.SetText(fmt.Sprintf("Hi %v", rand.Int()))
-	return image.NewRGBA(image.Rectangle{image.Point{0, 0}, image.Point{200, 200}})
+	a.s.SetText(fmt.Sprintf("Hi %v", rand.Int()))
+	rgba := image.NewRGBA(image.Rect(0, 0, 800, 500))
+	p, _ := plot.New()
+	l, _ := plotter.NewLine(plotter.XYs{{0, 0}, {1, 1}, {2, 2}})
+	p.Add(l)
+	da := plot.MakeDrawArea(vgimg.NewImage(rgba))
+	p.Draw(da)
+	// gc := draw2d.NewGraphicContext(rgba)
+	// gc.SetStrokeColor(image.Black)
+	// gc.SetFillColor(image.White)
+	// gc.Clear()
+	// for i := 0.0; i < 360; i = i + 10 { // Go from 0 to 360 degrees in 10 degree steps
+	// 	gc.BeginPath() // Start a new path
+	// 	gc.Save()      // Keep rotations temporary
+	// 	gc.MoveTo(144, 144)
+	// 	gc.Rotate(i * (math.Pi / 180.0)) // Rotate by degrees on stack from 'for'
+	// 	gc.RLineTo(72, 0)
+	// 	gc.Stroke()
+	// 	gc.Restore() // Get back the unrotated state
+	// }
+	// gc.Save()
+	return rgba
 }
-func (s *spectrum) Mouse(me ui.MouseEvent)  {}
-func (s *spectrum) Key(ke ui.KeyEvent) bool { return true }
+func (a *app) Mouse(me ui.MouseEvent)  {}
+func (a *app) Key(ke ui.KeyEvent) bool { return true }
 
 func initGUI() {
 	// b := ui.NewButton("Button")
@@ -44,21 +69,20 @@ func initGUI() {
 	// t.Append("Tab 2", ui.Space())
 	// t.Append("Tab 3", ui.Space())
 	// g := ui.NewGroup("Group", ui.Space())
-	status := ui.NewLabel("Status")
-	s.status = status
-	disp := ui.NewArea(200, 200, &s)
-	stack := ui.NewVerticalStack(disp, status)
+	a.s = ui.NewLabel("Status")
+	a.a = ui.NewArea(200, 200, &a)
+	stack := ui.NewVerticalStack(a.a, a.s)
 	stack.SetStretchy(0)
-	w = ui.NewWindow("NMR", 800, 500, stack)
-	w.OnClosing(func() bool {
+	a.w = ui.NewWindow("NMR", 800, 500, stack)
+	a.w.OnClosing(func() bool {
 		ui.Stop()
 		return true
 	})
-	w.Show()
+	a.w.Show()
 }
 func main() {
-	s.Data = *nmr.Process("fid")
-
+	expt, _ := nmr.ReadBruker("ma-catalyst/1")
+	a.expt = expt
 	go ui.Do(initGUI)
 	err := ui.Go()
 	if err != nil {
