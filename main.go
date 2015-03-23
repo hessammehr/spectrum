@@ -1,9 +1,11 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"image"
-	"math/rand"
+	"image/png"
+	"os"
 
 	"code.google.com/p/plotinum/plot"
 	"code.google.com/p/plotinum/plotter"
@@ -13,6 +15,11 @@ import (
 )
 
 type float float64
+
+var (
+	width  = 800
+	height = 500
+)
 
 type app struct {
 	expt *nmr.Expt
@@ -27,30 +34,32 @@ type app struct {
 
 var a app
 
+func XYs(Xs []float64, Ys []float64) ([]struct{ X, Y float64 }, error) {
+	if len(Xs) != len(Ys) {
+		return nil, errors.New("Xs and Ys must have the same length.")
+	}
+	result := make([]struct{ X, Y float64 }, len(Xs))
+	for i := range Xs {
+		result[i] = struct{ X, Y float64 }{Xs[i], Ys[i]}
+	}
+	return result, nil
+}
+
 func (a *app) Paint(rect image.Rectangle) *image.RGBA {
-	//f, _ := os.Open("a.png")
-	//rgba, _, _ := image.Decode(f)
-	a.s.SetText(fmt.Sprintf("Hi %v", rand.Int()))
-	rgba := image.NewRGBA(image.Rect(0, 0, 800, 500))
+	width, height = a.w.GetSize()
+	height -= 50
+	a.s.SetText(fmt.Sprintf("Hi %v, %v", width, height))
+	a.a.SetSize(width, height)
+	rgba := image.NewRGBA(image.Rect(0, 0, width, height))
 	p, _ := plot.New()
-	l, _ := plotter.NewLine(plotter.XYs{{0, 0}, {1, 1}, {2, 2}})
+	xys, _ := XYs(a.expt.Shifts, a.expt.Phased)
+	l, _ := plotter.NewLine(plotter.XYs(xys))
 	p.Add(l)
 	da := plot.MakeDrawArea(vgimg.NewImage(rgba))
 	p.Draw(da)
-	// gc := draw2d.NewGraphicContext(rgba)
-	// gc.SetStrokeColor(image.Black)
-	// gc.SetFillColor(image.White)
-	// gc.Clear()
-	// for i := 0.0; i < 360; i = i + 10 { // Go from 0 to 360 degrees in 10 degree steps
-	// 	gc.BeginPath() // Start a new path
-	// 	gc.Save()      // Keep rotations temporary
-	// 	gc.MoveTo(144, 144)
-	// 	gc.Rotate(i * (math.Pi / 180.0)) // Rotate by degrees on stack from 'for'
-	// 	gc.RLineTo(72, 0)
-	// 	gc.Stroke()
-	// 	gc.Restore() // Get back the unrotated state
-	// }
-	// gc.Save()
+	os.Remove("out.png")
+	f, _ := os.Create("out.png")
+	png.Encode(f, rgba)
 	return rgba
 }
 func (a *app) Mouse(me ui.MouseEvent)  {}
@@ -70,10 +79,10 @@ func initGUI() {
 	// t.Append("Tab 3", ui.Space())
 	// g := ui.NewGroup("Group", ui.Space())
 	a.s = ui.NewLabel("Status")
-	a.a = ui.NewArea(200, 200, &a)
+	a.a = ui.NewArea(width, height, &a)
 	stack := ui.NewVerticalStack(a.a, a.s)
 	stack.SetStretchy(0)
-	a.w = ui.NewWindow("NMR", 800, 500, stack)
+	a.w = ui.NewWindow("NMR", width, height, stack)
 	a.w.OnClosing(func() bool {
 		ui.Stop()
 		return true
@@ -82,6 +91,8 @@ func initGUI() {
 }
 func main() {
 	expt, _ := nmr.ReadBruker("ma-catalyst/1")
+	expt.FFT()
+	expt.Phase(0.1, 0.01)
 	a.expt = expt
 	go ui.Do(initGUI)
 	err := ui.Go()

@@ -9,4 +9,6 @@ type Expt struct {
 	TD     int
 	FID    []int32
 	FT     []complex128
+	Phased []float64
+	Shifts []float64
 }
