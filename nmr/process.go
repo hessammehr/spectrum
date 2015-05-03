@@ -2,8 +2,12 @@ package nmr
 
 import "math"
 
+func (e *Expt) Window() {
+
+}
+
 func (e *Expt) FFT() {
-	e.FT = FFT(IntToComplex(e.FID))
+	e.FT = FFT(FloatToComplex(e.FID))
 	e.Shifts = shifts(e.SW, e.O1P, e.TD)
 }
 

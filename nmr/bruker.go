@@ -37,10 +37,9 @@ func ReadBruker(expPath string) (*Expt, error) {
 	if err != nil {
 		log.Panic(err)
 	}
-	ft := FFT(IntToComplex(fid))
 	return &Expt{Name: name, Number: number,
 		NS: ns, SW: sw,
-		O1P: o1 / sfo1, TD: td, FID: fid, FT: ft}, nil
+		O1P: o1 / sfo1, TD: td, FID: removeDC(fid)}, nil
 }
 
 func parseAcqu(acquPath string) map[string]string {
@@ -80,4 +79,23 @@ func readFID(name string, td int) ([]int32, error) {
 		return nil, errors.New("Decoding error")
 	}
 	return fid, nil
+}
+
+func removeDC(fid []int32) []float64 {
+	if len(fid) == 0 {
+		return nil
+	}
+
+	result := make([]float64, len(fid))
+	var sum int32 = 0
+	for _, v := range fid {
+		sum += v
+	}
+
+	avg := float64(sum) / float64(len(fid))
+	fmt.Printf("Average: %v\n", avg)
+	for i, v := range fid {
+		result[i] = float64(v) - avg
+	}
+	return result
 }

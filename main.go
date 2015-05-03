@@ -2,8 +2,8 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"image"
-	"log"
 
 	"code.google.com/p/plotinum/plot"
 	"code.google.com/p/plotinum/plotter"
@@ -17,11 +17,28 @@ import (
 	"github.com/hessammehr/spectrum/nmr"
 )
 
+type windowMode int
+
+const (
+	ph0Mode windowMode = iota
+	ph1Mode
+	hzoomMode
+	vzoomMode
+	intMode
+	pickMode
+	normalMode
+)
+
 var (
 	width  = 800
 	height = 500
-	expt   nmr.Expt
+	expt   *nmr.Expt
+	redraw chan bool
+	mode   windowMode
+	shift  bool
 )
+
+type point struct{ X, Y float64 }
 
 func XYs(Xs []float64, Ys []float64) ([]struct{ X, Y float64 }, error) {
 	if len(Xs) != len(Ys) {
@@ -34,19 +51,59 @@ func XYs(Xs []float64, Ys []float64) ([]struct{ X, Y float64 }, error) {
 	return result, nil
 }
 
-func appMain(driver gxui.Driver) {
-	rgba := image.NewRGBA(image.Rect(0, 0, width, height))
-	p, _ := plot.New()
-	xys, _ := XYs(expt.Shifts, expt.Phased)
-	l, _ := plotter.NewLine(plotter.XYs(xys))
-	p.Add(l)
-	da := plot.MakeDrawArea(vgimg.NewImage(rgba))
-	p.Draw(da)
+func scroll(event gxui.MouseEvent) {
+	switch mode {
+	case ph0Mode:
+		amount := float64(event.ScrollY) / 20.0 / 360.0
+		expt.Ph0 += amount
+		expt.Phase(expt.Ph0, expt.Ph1)
+		fmt.Println(expt.Ph0)
+		redraw <- true
+	case ph1Mode:
+		amount := float64(event.ScrollY) / 50000.0 / 360.0
+		expt.Ph1 += amount
+		expt.Phase(expt.Ph0, expt.Ph1)
+		fmt.Println(expt.Ph1)
+		redraw <- true
+	}
+}
 
+func keyDown(k gxui.KeyboardEvent) {
+	fmt.Printf("Key down: %+v", k)
+	switch k.Key {
+	case 99, 103:
+		shift = true
+	case 34:
+		if shift == false {
+			mode = ph0Mode
+		} else {
+			mode = ph1Mode
+		}
+
+	case 1:
+		mode = normalMode
+	}
+	fmt.Println(mode)
+	redraw <- true
+}
+
+func keyUp(k gxui.KeyboardEvent) {
+	switch k.Key {
+	case 99, 103:
+		shift = false
+	default:
+		mode = normalMode
+	}
+	fmt.Printf("Key up: %+v", k)
+	redraw <- true
+}
+
+func appMain(driver gxui.Driver) {
+	fmt.Println("Driver started")
 	theme := dark.CreateTheme(driver)
 
 	img := theme.CreateImage()
-	img.SetTexture(driver.CreateTexture(rgba, 1))
+	img.OnMouseScroll(scroll)
 
 	label := theme.CreateLabel()
 	label.SetText("Status")
@@ -61,15 +118,39 @@ func appMain(driver gxui.Driver) {
 	window.AddChild(layout)
 	window.OnClose(driver.Terminate)
 	window.SetPadding(math.Spacing{L: 10, T: 10, R: 10, B: 10})
+	window.OnKeyDown(keyDown)
+	window.OnKeyUp(keyUp)
+
+	rgba := image.NewRGBA(image.Rect(0, 0, width, height))
+	go func() {
+		for {
+			fmt.Println("Redrawing")
+
+			p, _ := plot.New()
+			xys, _ := XYs(expt.Shifts, expt.Phased)
+			l, _ := plotter.NewLine(plotter.XYs(xys))
+			p.Add(l)
+			da := plot.MakeDrawArea(vgimg.NewImage(rgba))
+			p.Draw(da)
+			img.SetTexture(driver.CreateTexture(rgba, 1))
+
+			fmt.Println("Done drawing!")
+			fmt.Printf("%+v\n", mode)
+			<-redraw
+			// wait for redraw trigger
+		}
+	}()
+	fmt.Println("I'm here!")
 }
 
 func main() {
-	expt, err := nmr.ReadBruker("ma-catalyst/1")
-	if err != nil {
-		log.Panic("Failed to open experiment.")
-	}
+	mode = normalMode
+	redraw = make(chan (bool), 50)
+	expt, _ = nmr.ReadBruker("ma-catalyst/1")
+	// if err != nil {
+	// 	log.Panic("Failed to open experiment.")
+	// }
 	expt.FFT()
-	expt.Phase(0.1, 0.01)
-
+	expt.Phase(expt.Ph0, expt.Ph1)
 	gl.StartDriver(appMain)
 }

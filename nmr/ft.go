@@ -2,16 +2,16 @@ package nmr
 
 import "github.com/jvlmdr/go-fftw/fftw"
 
-func IntToComplex(vals []int32) []complex128 {
+func FloatToComplex(vals []float64) []complex128 {
 	result := make([]complex128, len(vals))
 	for i, val := range vals {
-		result[i] = complex(float64(val), 0)
+		result[i] = complex(val, 0)
 	}
 	return result
 }
 
 func FFT(sig []complex128) []complex128 {
-	return fftw.FFT(&fftw.Array{Elems: sig}).Elems
+	return fftw.FFT(&fftw.Array{Elems: sig[200:]}).Elems
 }
 
 func Reals(vals []complex128) []float64 {
